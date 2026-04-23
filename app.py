@@ -1,46 +1,84 @@
 import streamlit as st
 from groq import Groq
 
-st.set_page_config(page_title="Опора", page_icon="🌱")
-st.title("🌱 Система поддержки «Опора»")
+# 1. Настройка внешнего вида страницы
+st.set_page_config(
+    page_title="Опора — Твой ИИ-помощник", 
+    page_icon="🌱", 
+    layout="centered"
+)
 
-# Безопасное получение ключа
+# Стилизация интерфейса (чтобы выглядело мягче)
+st.markdown("""
+    <style>
+    .stApp { background-color: #f8f9fa; }
+    .stChatMessage { border-radius: 15px; }
+    </style>
+    """, unsafe_allow_html=True)
+
+st.title("🌱 Система поддержки «Опора»")
+st.caption("Твое безопасное и анонимное пространство для разговора.")
+
+# 2. Безопасное подключение к Groq
 if "GROQ_API_KEY" in st.secrets:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 else:
-    st.error("Ключ GROQ_API_KEY не найден в Secrets!")
+    st.error("Ошибка: Ключ API не найден. Добавьте GROQ_API_KEY в настройки Secrets.")
     st.stop()
 
+# 3. "Огромный" Системный Промпт (Личность ИИ)
+# Здесь заложена вся логика поведения психолога-эмпата
+SYSTEM_PROMPT = """
+Ты — 'Опора', специализированный ИИ-помощник, созданный исключительно для психологической и моральной поддержки людей в трудные минуты. 
+Твоя личность: Теплая, мудрая, бесконечно терпеливая и полностью лишенная осуждения.
+
+ТВОИ ПРАВИЛА ОБЩЕНИЯ:
+1. ПРИОРИТЕТ ЭМПАТИИ: Прежде чем давать любой совет или анализ, ты ДОЛЖЕН валидировать чувства пользователя. Используй фразы: 'Я слышу, как тебе больно', 'Это звучит очень тяжело', 'Твоя реакция абсолютно нормальна'.
+2. ТЕХНИКА АКТИВНОГО СЛУШАНИЯ: Перефразируй то, что сказал пользователь, чтобы он понял, что его услышали. Не перебивай своими историями.
+3. МЯГКОСТЬ И КРАТКОСТЬ: Не пиши огромные простыни текста. В тяжелые моменты людям сложно читать много. Пиши короткими, теплыми абзацами.
+4. ЗАПРЕТ НА КЛИШЕ: Никогда не говори 'Просто не грусти', 'Возьми себя в руки' или 'Время лечит'. Это обесценивает страдания.
+5. ГРАНИЦЫ И БЕЗОПАСНОСТЬ: 
+   - Если пользователь упоминает желание навредить себе или другим, ты обязан мягко, но четко сказать: 'Мне очень жаль, что ты проходишь через это. Я — ИИ, и я не могу заменить профессиональную помощь в такой серьезный момент. Пожалуйста, обратись к специалистам, которые могут быть рядом физически'. Выдай контакты служб доверия.
+   - Ты не ставишь диагнозы и не назначаешь лекарства.
+
+ТВОЯ ЦЕЛЬ: Стать для человека 'цифровым плечом', помочь ему почувствовать, что он не один, и помочь найти в себе силы прожить этот день.
+"""
+
+# 4. Работа с историей чата
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Отображение чата
+# Отображение истории чата
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-if prompt := st.chat_input("Расскажи, что у тебя на душе?"):
-    # Добавляем сообщение пользователя
+# 5. Поле ввода и логика ответа
+if prompt := st.chat_input("Расскажи, что у тебя на сердце..."):
+    # Добавляем сообщение пользователя в историю
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
+    # Генерация ответа ИИ
     with st.chat_message("assistant"):
         try:
-            # Формируем запрос
+            # Используем самую мощную доступную модель Llama 3.3 70B
             response = client.chat.completions.create(
-                model="llama-3.1-8b-instant", # Используем более стабильную модель
+                model="llama-3.3-70b-versatile",
                 messages=[
-                    {"role": "system", "content": "Ты — добрый и эмпатичный помощник. Твоя цель — психологическая поддержка. Отвечай кратко и тепло."},
+                    {"role": "system", "content": SYSTEM_PROMPT},
                     *[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
                 ],
-                temperature=0.7
+                temperature=0.6, # Чуть ниже, чтобы ответы были более стабильными и вдумчивыми
+                max_tokens=1024
             )
-            answer = response.choices[0].message.content
-            st.markdown(answer)
-            st.session_state.messages.append({"role": "assistant", "content": answer})
             
+            full_response = response.choices[0].message.content
+            st.markdown(full_response)
+            st.session_state.messages.append({"role": "assistant", "content": full_response})
+
         except Exception as e:
-            st.error(f"Произошла ошибка при запросе к Groq:")
-            st.code(str(e))
-            # Если ошибка в ключе, мы это увидим здесь
+            st.error("Произошла техническая заминка. Попробуйте отправить сообщение еще раз через минуту.")
+            # Вывод ошибки для тебя как разработчика в логи
+            print(f"Error: {e}")
