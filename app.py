@@ -29,7 +29,7 @@ if prompt := st.chat_input("Расскажи, что у тебя на душе?"
         try:
             # Формируем запрос
             response = client.chat.completions.create(
-                model="llama3-8b-8192", # Используем более стабильную модель
+                model="llama-3.1-8b-instant", # Используем более стабильную модель
                 messages=[
                     {"role": "system", "content": "Ты — добрый и эмпатичный помощник. Твоя цель — психологическая поддержка. Отвечай кратко и тепло."},
                     *[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
