@@ -4,26 +4,49 @@ from groq import Groq
 # --- КОНФИГУРАЦИЯ СТРАНИЦЫ ---
 st.set_page_config(page_title="Опора 🌱", layout="centered")
 
-# --- CSS ДЛЯ МЯГКОГО ПЕРЕЛИВА ФОНА ---
+# --- CSS: ЭФФЕКТ "АЛИСА 3" (16 МЛН ЦВЕТОВ) ---
 st.markdown("""
     <style>
     .stApp {
-        background: linear-gradient(135deg, #f3f7f9, #e8f5e9, #f3e5f5, #e3f2fd);
+        background: linear-gradient(
+            -45deg, 
+            #ee7752, #e73c7e, #23a6d5, #23d5ab, 
+            #7952ee, #3c7ee7, #d5a623, #d52323
+        );
         background-size: 400% 400%;
-        animation: gradientAnimation 20s ease infinite;
+        animation: aurora 15s ease infinite;
+        height: 100vh;
     }
 
-    @keyframes gradientAnimation {
+    @keyframes aurora {
         0% { background-position: 0% 50%; }
         50% { background-position: 100% 50%; }
         100% { background-position: 0% 50%; }
     }
 
-    /* Делаем блоки сообщений чуть прозрачными для красоты */
+    /* Делаем чат более современным и "стеклянным" */
     .stChatMessage {
-        background-color: rgba(255, 255, 255, 0.6) !important;
-        border-radius: 15px;
-        margin-bottom: 10px;
+        background-color: rgba(255, 255, 255, 0.15) !important;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 20px;
+        color: white !important;
+    }
+    
+    /* Смена цвета текста заголовка для читаемости на ярком фоне */
+    h1 {
+        color: white !important;
+        text-shadow: 2px 2px 10px rgba(0,0,0,0.2);
+    }
+    
+    p, span {
+        color: white !important;
+    }
+
+    /* Поле ввода */
+    .stChatInputContainer {
+        background-color: rgba(255, 255, 255, 0.2) !important;
+        border-radius: 15px !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -52,7 +75,7 @@ def ask_ai(messages):
         )
         return response.choices[0].message.content
     except Exception as e:
-        return "Я здесь. Просто небольшая заминка в сети. Попробуй еще раз, я никуда не ушел."
+        return "Я здесь. Мы на мгновение потеряли связь, но я рядом. Что ты чувствуешь?"
 
 # Отображение чата
 for message in st.session_state.messages:
