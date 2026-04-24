@@ -42,7 +42,7 @@ with st.sidebar:
     with st.expander("⚙️ Вход для автора"):
         password = st.text_input("Введите пароль", type="password")
         # ПРИДУМАЙ ПАРОЛЬ (замени '2406' на свой)
-        if password == "1234": 
+        if password == "2406": 
             st.subheader("Сообщения от пользователей:")
             if not st.session_state.support_db:
                 st.write("Пока жалоб нет 👍")
