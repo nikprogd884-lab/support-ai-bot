@@ -10,14 +10,17 @@ st.set_page_config(page_title="Опора 🌱", layout="wide")
 
 # Подключение к Google Sheets
 conn = st.connection("gsheets", type=GSheetsConnection)
-# ТВОЙ ID ТАБЛИЦЫ
+# ТВОЙ ID ТАБЛИЦЫ (Уже вставлен!)
 SPREADSHEET_ID = "1oc_E2IHKjJZSjt9fscY93srN77sNeN4qjqFrP4QkRN0"
+# Полный URL для надежности
+SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}"
 
 # --- 2. ФУНКЦИИ РАБОТЫ С ТАБЛИЦЕЙ ---
 
 def load_sheet(sheet_name):
     try:
-        return conn.read(spreadsheet=SPREADSHEET_ID, worksheet=sheet_name, ttl=0)
+        # Открываем через полный URL, так надежнее
+        return conn.read(spreadsheet=SHEET_URL, worksheet=sheet_name, ttl=0)
     except Exception:
         cols = {
             "Users": ["Имя", "Пароль"],
@@ -27,7 +30,9 @@ def load_sheet(sheet_name):
         return pd.DataFrame(columns=cols.get(sheet_name, []))
 
 def save_sheet(sheet_name, df):
-    conn.update(spreadsheet=SPREADSHEET_ID, worksheet=sheet_name, data=df)
+    # Очищаем данные от пустых строк перед сохранением
+    df = df.dropna(how='all')
+    conn.update(spreadsheet=SHEET_URL, worksheet=sheet_name, data=df)
 
 # --- 3. ФУНКЦИЯ ДЛЯ ИИ ---
 def ask_ai(messages, system_prompt):
@@ -68,8 +73,10 @@ if not st.session_state.logged_in:
                     st.error("Это имя уже занято")
                 elif u_name and u_pwd:
                     new_user = pd.DataFrame([{"Имя": u_name, "Пароль": u_pwd}])
-                    save_sheet("Users", pd.concat([users_df, new_user], ignore_index=True))
-                    st.success("Аккаунт создан! Теперь перейдите во 'Вход'")
+                    # Сохраняем и проверяем
+                    combined_users = pd.concat([users_df, new_user], ignore_index=True)
+                    save_sheet("Users", combined_users)
+                    st.success("Аккаунт создан! Теперь перейдите во 'Вход' и введите данные.")
     st.stop()
 
 # --- 5. МЕНЮ ЧАТОВ (САЙДБАР) ---
@@ -84,14 +91,15 @@ with st.sidebar:
     
     st.divider()
     all_chats = load_sheet("Chats")
-    my_chats = all_chats[all_chats['Пользователь'] == st.session_state.user_name] if not all_chats.empty else pd.DataFrame()
     
-    if not my_chats.empty:
-        chat_list = my_chats[['ID_Чата', 'Заголовок']].drop_duplicates(subset=['ID_Чата'], keep='last')
-        for _, row in chat_list[::-1].iterrows():
-            if st.button(f"💬 {row['Заголовок']}", key=row['ID_Чата'], use_container_width=True):
-                st.session_state.active_chat_id = row['ID_Чата']
-                st.rerun()
+    if not all_chats.empty:
+        my_chats = all_chats[all_chats['Пользователь'] == st.session_state.user_name]
+        if not my_chats.empty:
+            chat_list = my_chats[['ID_Чата', 'Заголовок']].drop_duplicates(subset=['ID_Чата'], keep='last')
+            for _, row in chat_list[::-1].iterrows():
+                if st.button(f"💬 {row['Заголовок']}", key=row['ID_Чата'], use_container_width=True):
+                    st.session_state.active_chat_id = row['ID_Чата']
+                    st.rerun()
 
     st.divider()
     with st.expander("🆘 Поддержка"):
@@ -108,6 +116,7 @@ if not st.session_state.active_chat_id:
     st.title("🌱 Опора")
     st.info("Создайте или выберите чат слева, чтобы начать.")
 else:
+    # Загружаем сообщения этого чата
     this_chat_data = all_chats[all_chats['ID_Чата'] == st.session_state.active_chat_id] if not all_chats.empty else pd.DataFrame()
     current_title = this_chat_data['Заголовок'].iloc[0] if not this_chat_data.empty else "Новый диалог"
     
@@ -135,5 +144,7 @@ else:
             st.markdown(ans)
         a_row = pd.DataFrame([{"ID_Чата": st.session_state.active_chat_id, "Пользователь": st.session_state.user_name, "Заголовок": current_title, "Роль": "assistant", "Сообщение": ans, "Дата": datetime.now().strftime("%Y-%m-%d %H:%M")}])
 
-        save_sheet("Chats", pd.concat([all_chats, u_row, a_row], ignore_index=True))
+        # Сохраняем всё вместе
+        updated_data = pd.concat([all_chats, u_row, a_row], ignore_index=True)
+        save_sheet("Chats", updated_data)
         st.rerun()
