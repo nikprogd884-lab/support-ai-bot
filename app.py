@@ -4,18 +4,17 @@ from groq import Groq
 # --- КОНФИГУРАЦИЯ СТРАНИЦЫ ---
 st.set_page_config(page_title="Опора 🌱", layout="centered")
 
-# --- CSS: ЭФФЕКТ "АЛИСА 3" (16 МЛН ЦВЕТОВ) ---
+# --- CSS: ЭФФЕКТ "АЛИСА 3" + СТЕКЛЯННЫЙ ЧАТ ---
 st.markdown("""
     <style>
     .stApp {
         background: linear-gradient(
             -45deg, 
             #ee7752, #e73c7e, #23a6d5, #23d5ab, 
-            #7952ee, #3c7ee7, #d5a623, #d52323
+            #7952ee, #3c7ee7, #d5a623, #d5a623
         );
         background-size: 400% 400%;
         animation: aurora 15s ease infinite;
-        height: 100vh;
     }
 
     @keyframes aurora {
@@ -24,42 +23,43 @@ st.markdown("""
         100% { background-position: 0% 50%; }
     }
 
-    /* Делаем чат более современным и "стеклянным" */
     .stChatMessage {
-        background-color: rgba(255, 255, 255, 0.15) !important;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        background-color: rgba(255, 255, 255, 0.12) !important;
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 20px;
         color: white !important;
+        margin-bottom: 10px;
     }
     
-    /* Смена цвета текста заголовка для читаемости на ярком фоне */
     h1 {
         color: white !important;
-        text-shadow: 2px 2px 10px rgba(0,0,0,0.2);
+        text-align: center;
+        font-weight: 300;
+        text-shadow: 0px 4px 10px rgba(0,0,0,0.1);
     }
     
-    p, span {
+    p, span, div {
         color: white !important;
     }
 
-    /* Поле ввода */
     .stChatInputContainer {
-        background-color: rgba(255, 255, 255, 0.2) !important;
-        border-radius: 15px !important;
+        background-color: rgba(255, 255, 255, 0.1) !important;
+        border-radius: 20px !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-st.markdown("<h1 style='text-align: center;'>🌱 Опора</h1>", unsafe_allow_html=True)
+st.markdown("<h1>🌱 Опора</h1>", unsafe_allow_html=True)
 
-# --- ЛОГИКА ИИ ---
-SYSTEM_PROMPT = """Ты — Опора. Ты безопасное и живое пространство для человека.
-Твоя задача — чувствовать контекст:
-1. Если человек в остром стрессе — отвечай кратко, помогай дышать и заземляться.
-2. Если человек хочет выговориться — будь глубоким и вдумчивым слушателем.
-3. Избегай шаблонов и длинных вступлений. 
-4. Ты мудрый, теплый и устойчивый друг. Твои ответы должны быть искренними."""
+# --- НОВАЯ ЖИВАЯ ЛОГИКА ---
+SYSTEM_PROMPT = """Ты — Опора. Забудь, что ты нейросеть. Говори как человек, который сидит рядом в трудный час.
+1. НИКОГДА не используй фразы: "это нормально", "я тебя понимаю", "всё пройдёт", "я здесь, чтобы помочь", "не стесняйся делиться". Это звучит как фальшивый робот.
+2. Будь настоящим. Если человеку плохо — признай это. Скажи "это дерьмово", "я тут, сижу рядом", "я слышу тебя".
+3. Не лезь с вопросами "хочешь рассказать?". Если человек захочет — расскажет сам. Просто дай почувствовать свое присутствие.
+4. Избегай длинных предложений. Говори просто, честно, без "психологических" замашек.
+5. Ты не решаешь проблемы. Ты просто разделяешь момент, каким бы тяжелым он ни был. Если нужно просто помолчать вместе — напиши одну короткую фразу."""
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -70,12 +70,12 @@ def ask_ai(messages):
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[{"role": "system", "content": SYSTEM_PROMPT}] + messages,
-            max_tokens=1000,
-            temperature=0.7
+            max_tokens=600,
+            temperature=0.85 # Повышаем "человечность" и непредсказуемость
         )
         return response.choices[0].message.content
     except Exception as e:
-        return "Я здесь. Мы на мгновение потеряли связь, но я рядом. Что ты чувствуешь?"
+        return "Я здесь. Техника иногда подводит, но я никуда не ухожу."
 
 # Отображение чата
 for message in st.session_state.messages:
@@ -83,7 +83,7 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # Ввод сообщения
-if prompt := st.chat_input("Я слушаю тебя..."):
+if prompt := st.chat_input("Я слушаю..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
