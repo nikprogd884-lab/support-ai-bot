@@ -4,23 +4,34 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
 import uuid
+import time
 
-# --- НАСТРОЙКИ ---
+# --- 1. НАСТРОЙКИ ---
 st.set_page_config(page_title="Опора 🌱", layout="wide")
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 SPREADSHEET_ID = "1oc_E2IHKjJZSjt9fscY93srN77sNeN4qjqFrP4QkRN0"
 SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}"
 
+# Улучшенная функция загрузки с защитой от сбоев
 def load_sheet(sheet_name):
     try:
         df = conn.read(spreadsheet=SHEET_URL, worksheet=sheet_name, ttl=0)
-        return df.dropna(how='all') # Убираем пустые строки
-    except:
-        return pd.DataFrame()
+        return df.dropna(how='all')
+    except Exception:
+        # Если листа нет, возвращаем пустой шаблон
+        cols = {"Users": ["Имя", "Пароль"], "Chats": ["ID_Чата", "Пользователь", "Заголовок", "Роль", "Сообщение", "Дата"]}
+        return pd.DataFrame(columns=cols.get(sheet_name, []))
 
+# Улучшенная функция сохранения с повторными попытками
 def save_sheet(sheet_name, df):
-    conn.update(spreadsheet=SHEET_URL, worksheet=sheet_name, data=df.dropna(how='all'))
+    for i in range(3): # Пробуем 3 раза, если Google тормозит
+        try:
+            conn.update(spreadsheet=SHEET_URL, worksheet=sheet_name, data=df.dropna(how='all'))
+            return True
+        except Exception:
+            time.sleep(1) # Ждем секунду перед повтором
+    return False
 
 def ask_ai(messages, system_prompt):
     try:
@@ -34,40 +45,47 @@ def ask_ai(messages, system_prompt):
     except Exception as e:
         return f"Ошибка ИИ: {e}"
 
-# --- ВХОД И РЕГИСТРАЦИЯ ---
+# --- 2. АВТОРИЗАЦИЯ И САМОСТОЯТЕЛЬНАЯ РЕГИСТРАЦИЯ ---
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
 if not st.session_state.logged_in:
     st.title("🌱 Система Опора")
-    choice = st.radio("Действие:", ["Вход", "Регистрация"])
-    
-    with st.form("auth"):
-        u_name = st.text_input("Имя").strip() # Убираем лишние пробелы
-        u_pwd = st.text_input("Пароль", type="password").strip()
-        
-        if st.form_submit_button("Подтвердить"):
-            users_df = load_sheet("Users")
-            
-            if choice == "Регистрация":
-                if not users_df.empty and u_name in users_df['Имя'].astype(str).values:
-                    st.error("Имя занято")
-                elif u_name and u_pwd:
-                    new_user = pd.DataFrame([{"Имя": u_name, "Пароль": u_pwd}])
-                    save_sheet("Users", pd.concat([users_df, new_user], ignore_index=True))
-                    st.success("Готово! Теперь выберите 'Вход'")
-            else:
-                if not users_df.empty:
-                    # Ищем совпадение (приводим всё к строкам для надежности)
-                    match = users_df[(users_df['Имя'].astype(str) == u_name) & (users_df['Пароль'].astype(str) == u_pwd)]
+    tab1, tab2 = st.tabs(["Вход", "Регистрация"])
+
+    with tab1:
+        with st.form("login"):
+            l_name = st.text_input("Имя").strip()
+            l_pwd = st.text_input("Пароль", type="password").strip()
+            if st.form_submit_button("Войти"):
+                users = load_sheet("Users")
+                if not users.empty:
+                    # Приводим к строкам для точного сравнения
+                    match = users[(users['Имя'].astype(str) == l_name) & (users['Пароль'].astype(str) == l_pwd)]
                     if not match.empty:
                         st.session_state.logged_in = True
-                        st.session_state.user_name = u_name
+                        st.session_state.user_name = l_name
                         st.rerun()
-                st.error("Неверное имя или пароль")
+                st.error("Неверные данные или пользователь не существует")
+
+    with tab2:
+        with st.form("reg"):
+            r_name = st.text_input("Придумайте Имя").strip()
+            r_pwd = st.text_input("Придумайте Пароль", type="password").strip()
+            if st.form_submit_button("Создать аккаунт"):
+                users = load_sheet("Users")
+                if r_name in users['Имя'].astype(str).values:
+                    st.error("Это имя уже занято, выберите другое")
+                elif r_name and r_pwd:
+                    new_user = pd.DataFrame([{"Имя": r_name, "Пароль": r_pwd}])
+                    success = save_sheet("Users", pd.concat([users, new_user], ignore_index=True))
+                    if success:
+                        st.success("Успех! Теперь войдите во вкладке 'Вход'")
+                    else:
+                        st.error("Ошибка связи с базой. Попробуйте еще раз через 5 секунд.")
     st.stop()
 
-# --- ОСНОВНОЙ ИНТЕРФЕЙС ---
+# --- 3. ИНТЕРФЕЙС ПОСЛЕ ВХОДА ---
 if "active_chat_id" not in st.session_state:
     st.session_state.active_chat_id = None
 
@@ -81,17 +99,17 @@ with st.sidebar:
     
     st.divider()
     if not all_chats.empty:
-        my_chats = all_chats[all_chats['Пользователь'] == st.session_state.user_name]
+        my_chats = all_chats[all_chats['Пользователь'].astype(str) == st.session_state.user_name]
         if not my_chats.empty:
             menu = my_chats[['ID_Чата', 'Заголовок']].drop_duplicates(subset=['ID_Чата'], keep='last')
             for _, row in menu[::-1].iterrows():
                 if st.button(f"💬 {row['Заголовок']}", key=row['ID_Чата'], use_container_width=True):
-                    st.session_state.active_chat_id = row['ID_Чаta']
+                    st.session_state.active_chat_id = row['ID_Чата']
                     st.rerun()
 
-# --- ОКНО ЧАТА ---
+# --- 4. ОКНО ЧАТА ---
 if not st.session_state.active_chat_id:
-    st.info("Создайте чат слева")
+    st.info("Создайте новый чат в меню слева")
 else:
     chat_data = all_chats[all_chats['ID_Чата'] == st.session_state.active_chat_id] if not all_chats.empty else pd.DataFrame()
     title = chat_data['Заголовок'].iloc[0] if not chat_data.empty else "Новый диалог"
@@ -103,7 +121,7 @@ else:
             st.markdown(row['Сообщение'])
         history.append({"role": row['Роль'], "content": row['Сообщение']})
 
-    if prompt := st.chat_input("Напиши мне..."):
+    if prompt := st.chat_input("Спроси о чем-нибудь..."):
         if chat_data.empty:
             title = ask_ai([{"role": "user", "content": prompt}], "Придумай название из 2 слов.").strip().replace('"', '')
 
