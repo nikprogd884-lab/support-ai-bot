@@ -1,72 +1,95 @@
 import streamlit as st
 from groq import Groq
+import random
 
-# --- КОНФИГУРАЦИЯ СТРАНИЦЫ ---
-st.set_page_config(page_title="Опора 🌱", layout="centered")
+# --- 1. КОНФИГУРАЦИЯ ---
+st.set_page_config(page_title="Опора", layout="centered")
 
-# --- CSS ДЛЯ МЯГКОГО ПЕРЕЛИВА ФОНА ---
-st.markdown("""
-    <style>
-    .stApp {
-        background: linear-gradient(135deg, #f3f7f9, #e8f5e9, #f3e5f5, #e3f2fd);
-        background-size: 400% 400%;
-        animation: gradientAnimation 20s ease infinite;
-    }
-
-    @keyframes gradientAnimation {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-    }
-
-    /* Делаем блоки сообщений чуть прозрачными для красоты */
-    .stChatMessage {
-        background-color: rgba(255, 255, 255, 0.6) !important;
-        border-radius: 15px;
-        margin-bottom: 10px;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-st.markdown("<h1 style='text-align: center;'>🌱 Опора</h1>", unsafe_allow_html=True)
-
-# --- ЛОГИКА ИИ ---
-SYSTEM_PROMPT = """Ты — Опора. Ты безопасное и живое пространство для человека.
-Твоя задача — чувствовать контекст:
-1. Если человек в остром стрессе — отвечай кратко, помогай дышать и заземляться.
-2. Если человек хочет выговориться — будь глубоким и вдумчивым слушателем.
-3. Избегай шаблонов и длинных вступлений. 
-4. Ты мудрый, теплый и устойчивый друг. Твои ответы должны быть искренними."""
-
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
+# Функция связи с ИИ
 def ask_ai(messages):
     try:
         client = Groq(api_key=st.secrets["GROQ_API_KEY"])
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=[{"role": "system", "content": SYSTEM_PROMPT}] + messages,
-            max_tokens=1000,
-            temperature=0.7
+            messages=[{"role": "system", "content": "Ты Опора — теплый и краткий помощник. Твоя задача — выслушать и поддержать человека."}] + messages,
+            max_tokens=500
         )
         return response.choices[0].message.content
     except Exception as e:
-        return "Я здесь. Просто небольшая заминка в сети. Попробуй еще раз, я никуда не ушел."
+        return f"Ошибка: {e}"
 
-# Отображение чата
+# Список поддерживающих фраз
+AFFIRMATIONS = [
+    "Ты справляешься лучше, чем тебе кажется. ✨",
+    "Твои чувства важны. Позволь им быть. ❤️",
+    "Маленькие шаги тоже ведут к большим целям. 🌱",
+    "Ты ценен просто потому, что ты есть. ⭐",
+    "Дыши. Всё обязательно наладится. 🙏"
+]
+
+# --- 2. ИНТЕРФЕЙС ПРИЛОЖЕНИЯ ---
+st.title("🌱 Опора")
+
+# Вывод случайной фразы при загрузке
+if "daily_quote" not in st.session_state:
+    st.session_state.daily_quote = random.choice(AFFIRMATIONS)
+st.write(f"*{st.session_state.daily_quote}*")
+
+# --- 3. БЛОК ЭКСТРЕННОЙ ПОМОЩИ (SOS) ---
+with st.expander("🚨 ЭКСТРЕННАЯ ПОМОЩЬ (SOS)"):
+    st.error("Помни: ты не один. Помощь рядом.")
+    
+    col_btn1, col_btn2 = st.columns(2)
+    
+    if col_btn1.button("📞 Позвонить детям", use_container_width=True):
+        st.session_state.confirm_call = "88002000122"
+    
+    if col_btn2.button("📞 Психолог МЧС", use_container_width=True):
+        st.session_state.confirm_call = "74959895050"
+
+    # Логика подтверждения звонка
+    if "confirm_call" in st.session_state and st.session_state.confirm_call:
+        st.warning(f"Точно вызвать службу {st.session_state.confirm_call}?")
+        c1, c2 = st.columns(2)
+        if c1.button("✅ ДА, звонить", type="primary", use_container_width=True):
+            # Переход по ссылке tel: для звонка
+            st.markdown(f'<meta http-equiv="refresh" content="0; url=tel:{st.session_state.confirm_call}">', unsafe_allow_html=True)
+            st.session_state.confirm_call = None
+        if c2.button("❌ НЕТ, отмена", use_container_width=True):
+            st.session_state.confirm_call = None
+            st.rerun()
+
+    st.divider()
+    st.subheader("🧘 Техника дыхания")
+    st.write("Вдох (4 сек) ➜ Пауза (4 сек) ➜ Выдох (4 сек) ➜ Пауза (4 сек)")
+    st.subheader("🌍 Заземление 5-4-3-2-1")
+    st.caption("Назови: 5 предметов вокруг, 4 тактильных ощущения, 3 звука, 2 запаха, 1 вкус.")
+
+st.divider()
+
+# --- 4. ЛОГИКА ЧАТА ---
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# Кнопка быстрой очистки чата
+if st.button("🗑️ Очистить диалог"):
+    st.session_state.messages = []
+    st.rerun()
+
+# Отображение сообщений
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Ввод сообщения
-if prompt := st.chat_input("Я слушаю тебя..."):
+# Поле ввода сообщения
+if prompt := st.chat_input("Что у тебя на душе?"):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        full_response = ask_ai(st.session_state.messages)
-        st.markdown(full_response)
+        with st.spinner("Слушаю..."):
+            response = ask_ai(st.session_state.messages)
+            st.markdown(response)
     
-    st.session_state.messages.append({"role": "assistant", "content": full_response})
+    st.session_state.messages.append({"role": "assistant", "content": response})
