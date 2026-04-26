@@ -1,48 +1,27 @@
 import streamlit as st
 from groq import Groq
 
-# 1. Очистка ключа: .strip() уберет пробелы и невидимые символы
-# ВНИМАНИЕ: Проверь, чтобы в самом ключе не было русских букв С или А (иногда путают раскладку)
-RAW_KEY = "ТВОЙ_API_КЛЮЧ"
-client = Groq(api_key=RAW_KEY.strip())
+# 1. Жесткая очистка ключа через фильтр символов
+def super_clean(text):
+    # Оставляем только английские буквы, цифры и дефис. Всё остальное — вон.
+    return "".join(char for char in text if char in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_")
 
-st.set_page_config(page_title="Опора", page_icon="🌱", layout="centered")
+RAW_KEY = "ТВОЙ_НОВЫЙ_КЛЮЧ" 
+CLEAN_KEY = super_clean(RAW_KEY)
 
-# Стили (оставил только самое нужное)
-st.markdown("""
-    <style>
-    .stButton>button { width: 100%; border-radius: 20px; height: 3.5em; font-weight: bold; }
-    .main-sos-btn button { background-color: #ff4b4b !important; color: white !important; }
-    </style>
-    """, unsafe_allow_html=True)
+# Инициализация с очищенным ключом
+client = Groq(api_key=CLEAN_KEY)
 
+st.set_page_config(page_title="Opora", page_icon="🌱")
+
+# Заголовок и SOS (упростил до предела для теста)
 st.title("Опора 🌱")
-st.info("Анонимный чат поддержки. Данные удаляются при закрытии вкладки.")
 
-# --- SOS ЛОГИКА ---
-if "sos_active" not in st.session_state:
-    st.session_state.sos_active = False
-
-if not st.session_state.sos_active:
-    st.markdown('<div class="main-sos-btn">', unsafe_allow_html=True)
-    if st.button("🆘 ЭКСТРЕННАЯ ПОМОЩЬ (SOS)"):
-        st.session_state.sos_active = True
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-else:
-    st.warning("Показать номер телефона доверия?")
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("✅ Да"):
-            st.success("📞 **8-800-2000-122**")
-    with c2:
-        if st.button("❌ Нет"):
-            st.session_state.sos_active = False
-            st.rerun()
+if st.button("🆘 SOS"):
+    st.warning("Телефон доверия: 8-800-2000-122")
 
 st.divider()
 
-# --- ЧАТ ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -56,32 +35,23 @@ if prompt := st.chat_input("Напиши мне..."):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        # ВАЖНО: Системный промпт на английском, чтобы избежать UnicodeError. 
-        # ИИ все равно поймет, что отвечать надо по-русски, так как ты пишешь по-русски.
-        api_messages = [
-            {"role": "system", "content": "You are 'Opora', a helpful assistant. Respond in Russian language only."}
-        ]
-        for m in st.session_state.messages:
-            api_messages.append({"role": m["role"], "content": m["content"]})
-        
+        # ПРОВЕРКА: Если ошибка вылетает здесь, значит проблема в ТЕКСТЕ СООБЩЕНИЯ (кириллице)
+        # В Python 3.14 иногда ломается передача UTF-8 в заголовках.
         try:
-            # Используем твой рабочий метод стриминга
-            stream = client.chat.completions.create(
+            # Важно: передаем промпт как чистый текст
+            chat_completion = client.chat.completions.create(
                 model="llama3-8b-8192",
-                messages=api_messages,
-                stream=True,
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant. Speak Russian."},
+                    {"role": "user", "content": prompt}
+                ],
+                stream=False # Отключим стриминг для теста, так надежнее
             )
             
-            response_text = ""
-            placeholder = st.empty()
-            for chunk in stream:
-                content = chunk.choices[0].delta.content
-                if content:
-                    response_text += content
-                    placeholder.markdown(response_text + "▌")
-            placeholder.markdown(response_text)
-            st.session_state.messages.append({"role": "assistant", "content": response_text})
+            response = chat_completion.choices[0].message.content
+            st.markdown(response)
+            st.session_state.messages.append({"role": "assistant", "content": response})
             
         except Exception as e:
-            # Если ошибка все равно есть, выводим её текст полностью для диагностики
             st.error(f"Ошибка API: {str(e)}")
+            st.info("Если видишь ASCII Error — попробуй ввести приветствие на АНГЛИЙСКОМ (Hello).")
