@@ -1,57 +1,91 @@
 import streamlit as st
 from groq import Groq
 
-# 1. Жесткая очистка ключа через фильтр символов
-def super_clean(text):
-    # Оставляем только английские буквы, цифры и дефис. Всё остальное — вон.
-    return "".join(char for char in text if char in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_")
+# Инициализация клиента Groq
+client = Groq(api_key="ТВОЙ_API_КЛЮЧ")
 
-RAW_KEY = "ТВОЙ_НОВЫЙ_КЛЮЧ" 
-CLEAN_KEY = super_clean(RAW_KEY)
+# Настройка страницы
+st.set_page_config(page_title="Опора", page_icon="🌱", layout="centered")
 
-# Инициализация с очищенным ключом
-client = Groq(api_key=CLEAN_KEY)
+# Стили для кнопок
+st.markdown("""
+    <style>
+    /* Стиль основной красной кнопки SOS */
+    .stButton>button {
+        width: 100%;
+        border-radius: 20px;
+        height: 3.5em;
+        font-weight: bold;
+    }
+    div[data-testid="stMarkdownContainer"] p {
+        font-size: 1.1rem;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-st.set_page_config(page_title="Opora", page_icon="🌱")
-
-# Заголовок и SOS (упростил до предела для теста)
+# Заголовок
 st.title("Опора 🌱")
 
-if st.button("🆘 SOS"):
-    st.warning("Телефон доверия: 8-800-2000-122")
+# Описание
+st.info("Это твой анонимный чат поддержки. Все сообщения удаляются после закрытия вкладки.")
+
+# --- БЛОК SOS С ПОДТВЕРЖДЕНИЕМ ---
+if "sos_active" not in st.session_state:
+    st.session_state.sos_active = False
+
+# Если кнопка SOS еще не нажата
+if not st.session_state.sos_active:
+    if st.button("🆘 ЭКСТРЕННАЯ ПОМОЩЬ (SOS)", type="primary"):
+        st.session_state.sos_active = True
+        st.rerun()
+
+# Если нажали SOS, показываем выбор
+else:
+    st.warning("Вы хотите получить номер телефона доверия?")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("✅ Да, показать"):
+            st.success("📞 **8-800-2000-122**\n\n(Детский телефон доверия)")
+            if st.button("Закрыть номер"):
+                st.session_state.sos_active = False
+                st.rerun()
+                
+    with col2:
+        if st.button("❌ Нет, назад"):
+            st.session_state.sos_active = False
+            st.rerun()
 
 st.divider()
 
+# --- ЛОГИКА ЧАТА ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-for m in st.session_state.messages:
-    with st.chat_message(m["role"]):
-        st.markdown(m["content"])
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-if prompt := st.chat_input("Напиши мне..."):
+if prompt := st.chat_input("Напиши, что тебя беспокоит..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        # ПРОВЕРКА: Если ошибка вылетает здесь, значит проблема в ТЕКСТЕ СООБЩЕНИЯ (кириллице)
-        # В Python 3.14 иногда ломается передача UTF-8 в заголовках.
-        try:
-            # Важно: передаем промпт как чистый текст
-            chat_completion = client.chat.completions.create(
-                model="llama3-8b-8192",
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant. Speak Russian."},
-                    {"role": "user", "content": prompt}
-                ],
-                stream=False # Отключим стриминг для теста, так надежнее
-            )
-            
-            response = chat_completion.choices[0].message.content
-            st.markdown(response)
-            st.session_state.messages.append({"role": "assistant", "content": response})
-            
-        except Exception as e:
-            st.error(f"Ошибка API: {str(e)}")
-            st.info("Если видишь ASCII Error — попробуй ввести приветствие на АНГЛИЙСКОМ (Hello).")
+        system_prompt = "Ты — Опора, бережный ИИ-помощник. Выслушай и поддержи пользователя анонимно."
+        
+        full_response = ""
+        completion = client.chat.completions.create(
+            model="llama3-8b-8192",
+            messages=[{"role": "system", "content": system_prompt}] + st.session_state.messages,
+            stream=True,
+        )
+        
+        placeholder = st.empty()
+        for chunk in completion:
+            if chunk.choices[0].delta.content:
+                full_response += chunk.choices[0].delta.content
+                placeholder.markdown(full_response + "▌")
+        placeholder.markdown(full_response)
+    
+    st.session_state.messages.append({"role": "assistant", "content": full_response})
