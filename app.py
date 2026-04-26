@@ -1,36 +1,25 @@
 import streamlit as st
 from groq import Groq
 
-# 1. Инициализация (убедись, что ключ вставлен верно)
-client = Groq(api_key="ТВОЙ_API_КЛЮЧ")
+# 1. Очистка ключа: .strip() уберет пробелы и невидимые символы
+# ВНИМАНИЕ: Проверь, чтобы в самом ключе не было русских букв С или А (иногда путают раскладку)
+RAW_KEY = "ТВОЙ_API_КЛЮЧ"
+client = Groq(api_key=RAW_KEY.strip())
 
-# Настройка страницы
 st.set_page_config(page_title="Опора", page_icon="🌱", layout="centered")
 
-# Стили
+# Стили (оставил только самое нужное)
 st.markdown("""
     <style>
-    .stButton>button {
-        width: 100%;
-        border-radius: 20px;
-        height: 3.5em;
-        font-weight: bold;
-    }
-    /* Красная кнопка SOS */
-    .main-sos-btn button {
-        background-color: #ff4b4b !important;
-        color: white !important;
-        border: none;
-    }
+    .stButton>button { width: 100%; border-radius: 20px; height: 3.5em; font-weight: bold; }
+    .main-sos-btn button { background-color: #ff4b4b !important; color: white !important; }
     </style>
     """, unsafe_allow_html=True)
 
 st.title("Опора 🌱")
+st.info("Анонимный чат поддержки. Данные удаляются при закрытии вкладки.")
 
-# Описание
-st.info("Это твой анонимный чат поддержки. Все сообщения удаляются после закрытия вкладки.")
-
-# --- БЛОК SOS ---
+# --- SOS ЛОГИКА ---
 if "sos_active" not in st.session_state:
     st.session_state.sos_active = False
 
@@ -41,13 +30,13 @@ if not st.session_state.sos_active:
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 else:
-    st.warning("Вы хотите получить номер телефона доверия?")
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("✅ Да, показать"):
-            st.success("📞 **8-800-2000-122**\n\n(Детский телефон доверия)")
-    with col2:
-        if st.button("❌ Нет, назад"):
+    st.warning("Показать номер телефона доверия?")
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("✅ Да"):
+            st.success("📞 **8-800-2000-122**")
+    with c2:
+        if st.button("❌ Нет"):
             st.session_state.sos_active = False
             st.rerun()
 
@@ -57,46 +46,42 @@ st.divider()
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Отображение истории
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+for m in st.session_state.messages:
+    with st.chat_message(m["role"]):
+        st.markdown(m["content"])
 
-# Ввод сообщения
-if prompt := st.chat_input("Напиши, что тебя беспокоит..."):
-    # Добавляем сообщение пользователя в историю
+if prompt := st.chat_input("Напиши мне..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Ответ ИИ
     with st.chat_message("assistant"):
-        # Оставляем системный промпт максимально простым
-        messages_for_api = [
-            {"role": "system", "content": "Ты — Опора, бережный помощник. Отвечай на русском языке."}
+        # ВАЖНО: Системный промпт на английском, чтобы избежать UnicodeError. 
+        # ИИ все равно поймет, что отвечать надо по-русски, так как ты пишешь по-русски.
+        api_messages = [
+            {"role": "system", "content": "You are 'Opora', a helpful assistant. Respond in Russian language only."}
         ]
-        # Добавляем историю сообщений
         for m in st.session_state.messages:
-            messages_for_api.append({"role": m["role"], "content": m["content"]})
+            api_messages.append({"role": m["role"], "content": m["content"]})
         
-        full_response = ""
         try:
-            # Прямой запрос к API
-            completion = client.chat.completions.create(
+            # Используем твой рабочий метод стриминга
+            stream = client.chat.completions.create(
                 model="llama3-8b-8192",
-                messages=messages_for_api,
+                messages=api_messages,
                 stream=True,
             )
             
+            response_text = ""
             placeholder = st.empty()
-            for chunk in completion:
-                if chunk.choices[0].delta.content:
-                    full_response += chunk.choices[0].delta.content
-                    placeholder.markdown(full_response + "▌")
-            placeholder.markdown(full_response)
-            
-            # Сохраняем ответ ассистента
-            st.session_state.messages.append({"role": "assistant", "content": full_response})
+            for chunk in stream:
+                content = chunk.choices[0].delta.content
+                if content:
+                    response_text += content
+                    placeholder.markdown(response_text + "▌")
+            placeholder.markdown(response_text)
+            st.session_state.messages.append({"role": "assistant", "content": response_text})
             
         except Exception as e:
-            st.error("Произошла ошибка при получении ответа. Пожалуйста, проверьте API-ключ.")
+            # Если ошибка все равно есть, выводим её текст полностью для диагностики
+            st.error(f"Ошибка API: {str(e)}")
