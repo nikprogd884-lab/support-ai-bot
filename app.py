@@ -35,16 +35,15 @@ if "messages" not in st.session_state:
 if "dark_mode" not in st.session_state:
     st.session_state.dark_mode = False
 
-# --- 3. ПЕРЕКЛЮЧАТЕЛЬ ТЕМЫ (в сайдбаре, ДО применения стилей) ---
+# --- 3. ПЕРЕКЛЮЧАТЕЛЬ ТЕМЫ ---
 with st.sidebar:
     new_dark_mode = st.toggle("🌙 Тёмная тема", value=st.session_state.dark_mode)
     if new_dark_mode != st.session_state.dark_mode:
         st.session_state.dark_mode = new_dark_mode
-        st.rerun()  # Принудительная перерисовка при переключении
+        st.rerun()
     st.caption("Переключение мгновенно. Сохраняется в рамках сессии.")
 
-# --- 4. ПРИМЕНЕНИЕ СТИЛЕЙ (после переключателя!) ---
-# Базовые стили
+# --- 4. СТИЛИ (БАЗОВЫЕ) ---
 st.markdown("""
     <style>
     * { transition: background-color 0.3s ease, color 0.3s ease; }
@@ -54,27 +53,39 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# Тёмная тема (применяется только если включена)
+# --- 5. ТЁМНАЯ ТЕМА (ПОЛНОЕ ПОКРЫТИЕ РАМОК) ---
 if st.session_state.dark_mode:
     st.markdown("""
     <style>
     :root {
-        --bg: #181820 !important; 
-        --surface: #242430 !important; 
-        --text: #e4e4ec !important; 
-        --border: #38384a !important; 
-        --link: #8b9aff !important;
+        --bg: #181820; --surface: #242430; --text: #e4e4ec; --border: #38384a; --link: #8b9aff;
     }
-    .stApp { background-color: var(--bg) !important; color: var(--text) !important; }
-    .main .block-container { background-color: var(--bg) !important; }
-    .stChatMessage { background-color: var(--surface) !important; border-radius: 14px; }
-    input, textarea, select { background-color: var(--surface) !important; color: var(--text) !important; border-color: var(--border) !important; }
-    button:not(.sos-main button) { background-color: var(--surface) !important; color: var(--text) !important; border: 1px solid var(--border) !important; }
+    /* Основной фон, шапка и контейнер */
+    body, .stApp, .main .block-container, header, [data-testid="stToolbar"] {
+        background-color: var(--bg) !important;
+        color: var(--text) !important;
+    }
+    /* Боковая панель (рамка слева) */
+    section[data-testid="stSidebar"], section[data-testid="stSidebar"] > div {
+        background-color: #1a1a24 !important;
+        border-right: 1px solid var(--border) !important;
+    }
+    /* Чат и поля ввода */
+    .stChatMessage { background-color: var(--surface) !important; }
+    input, textarea, select, .stTextInput > div > div > input {
+        background-color: var(--surface) !important; color: var(--text) !important; border-color: var(--border) !important;
+    }
+    /* Кнопки (кроме SOS) */
+    button:not(.sos-main button) {
+        background-color: var(--surface) !important; color: var(--text) !important; border: 1px solid var(--border) !important;
+    }
     button:not(.sos-main button):hover { background-color: #2e2e3c !important; }
-    .stAlert > div { background-color: var(--surface) !important; color: var(--text) !important; border-color: var(--border) !important; }
-    .stTextInput > div > div > input { background-color: var(--surface) !important; color: var(--text) !important; }
-    .stTextInput > div > div > input::placeholder { color: #888 !important; }
-    h1, h2, h3, p, div, span, label { color: var(--text) !important; }
+    /* Скроллбар */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    /* Текст, ссылки, разделители */
+    h1, h2, h3, p, div, span, label, .stMarkdown { color: var(--text) !important; }
     a { color: var(--link) !important; }
     .tel-link { color: #4ade80 !important; }
     .stDivider { border-top-color: var(--border) !important; }
@@ -84,7 +95,7 @@ if st.session_state.dark_mode:
 st.title("🌱 Опора")
 st.write(f"*{st.session_state.daily_quote}*")
 
-# --- 5. БЛОК SOS ---
+# --- 6. БЛОК SOS ---
 if not st.session_state.sos_active:
     st.markdown('<div class="sos-main">', unsafe_allow_html=True)
     if st.button("🆘 ЭКСТРЕННАЯ ПОМОЩЬ (SOS)"):
@@ -115,7 +126,7 @@ else:
 
 st.divider()
 
-# --- 6. ЛОГИКА ЧАТА ---
+# --- 7. ЛОГИКА ЧАТА ---
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
@@ -134,11 +145,11 @@ if prompt := st.chat_input("Что у тебя на душе?"):
 
 if st.session_state.messages:
     st.write("")
-    if st.button("🗑️ Очистить чат (анонимно)"):
+    if st.button("️ Очистить чат (анонимно)"):
         st.session_state.messages = []
         st.rerun()
 
-# --- 7. ДИСКЛЕЙМЕР ---
+# --- 8. ДИСКЛЕЙМЕР ---
 st.markdown("""
 <div style="
     text-align: center; 
