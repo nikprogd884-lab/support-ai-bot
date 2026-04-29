@@ -35,8 +35,16 @@ if "messages" not in st.session_state:
 if "dark_mode" not in st.session_state:
     st.session_state.dark_mode = False
 
-# --- 3. ИНТЕРФЕЙС И СТИЛИ ---
-# Базовые стили (светлая тема + общие элементы)
+# --- 3. ПЕРЕКЛЮЧАТЕЛЬ ТЕМЫ (в сайдбаре, ДО применения стилей) ---
+with st.sidebar:
+    new_dark_mode = st.toggle("🌙 Тёмная тема", value=st.session_state.dark_mode)
+    if new_dark_mode != st.session_state.dark_mode:
+        st.session_state.dark_mode = new_dark_mode
+        st.rerun()  # Принудительная перерисовка при переключении
+    st.caption("Переключение мгновенно. Сохраняется в рамках сессии.")
+
+# --- 4. ПРИМЕНЕНИЕ СТИЛЕЙ (после переключателя!) ---
+# Базовые стили
 st.markdown("""
     <style>
     * { transition: background-color 0.3s ease, color 0.3s ease; }
@@ -46,36 +54,37 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# Тёмная тема (подключается по флагу)
+# Тёмная тема (применяется только если включена)
 if st.session_state.dark_mode:
     st.markdown("""
     <style>
     :root {
-        --bg: #181820; --surface: #242430; --text: #e4e4ec; --border: #38384a; --link: #8b9aff;
+        --bg: #181820 !important; 
+        --surface: #242430 !important; 
+        --text: #e4e4ec !important; 
+        --border: #38384a !important; 
+        --link: #8b9aff !important;
     }
-    .stApp { background-color: var(--bg); color: var(--text); }
-    .main .block-container { background-color: var(--bg); }
+    .stApp { background-color: var(--bg) !important; color: var(--text) !important; }
+    .main .block-container { background-color: var(--bg) !important; }
     .stChatMessage { background-color: var(--surface) !important; border-radius: 14px; }
     input, textarea, select { background-color: var(--surface) !important; color: var(--text) !important; border-color: var(--border) !important; }
-    button:not(.sos-main button) { background-color: var(--surface) !important; color: var(--text) !important; border-color: var(--border) !important; }
+    button:not(.sos-main button) { background-color: var(--surface) !important; color: var(--text) !important; border: 1px solid var(--border) !important; }
     button:not(.sos-main button):hover { background-color: #2e2e3c !important; }
-    .stAlert > div { background-color: var(--surface) !important; color: var(--text) !important; }
+    .stAlert > div { background-color: var(--surface) !important; color: var(--text) !important; border-color: var(--border) !important; }
+    .stTextInput > div > div > input { background-color: var(--surface) !important; color: var(--text) !important; }
     .stTextInput > div > div > input::placeholder { color: #888 !important; }
-    h1, h2, h3 { color: #ffffff !important; }
+    h1, h2, h3, p, div, span, label { color: var(--text) !important; }
     a { color: var(--link) !important; }
-    .tel-link { color: #4ade80 !important; } /* Зелёный номер в тёмной теме */
+    .tel-link { color: #4ade80 !important; }
+    .stDivider { border-top-color: var(--border) !important; }
     </style>
     """, unsafe_allow_html=True)
-
-# Переключатель темы в сайдбаре
-with st.sidebar:
-    st.session_state.dark_mode = st.toggle("🌙 Тёмная тема", value=st.session_state.dark_mode)
-    st.caption("Переключение мгновенно. Сохраняется в рамках сессии.")
 
 st.title("🌱 Опора")
 st.write(f"*{st.session_state.daily_quote}*")
 
-# --- 4. БЛОК SOS ---
+# --- 5. БЛОК SOS ---
 if not st.session_state.sos_active:
     st.markdown('<div class="sos-main">', unsafe_allow_html=True)
     if st.button("🆘 ЭКСТРЕННАЯ ПОМОЩЬ (SOS)"):
@@ -106,7 +115,7 @@ else:
 
 st.divider()
 
-# --- 5. ЛОГИКА ЧАТА ---
+# --- 6. ЛОГИКА ЧАТА ---
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
@@ -129,7 +138,7 @@ if st.session_state.messages:
         st.session_state.messages = []
         st.rerun()
 
-# --- 6. ДИСКЛЕЙМЕР (внизу, мелкий, ненавязчивый) ---
+# --- 7. ДИСКЛЕЙМЕР ---
 st.markdown("""
 <div style="
     text-align: center; 
