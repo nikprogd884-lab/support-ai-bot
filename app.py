@@ -17,16 +17,7 @@ def ask_ai(messages):
     except Exception as e:
         return f"Извини, произошла ошибка связи. Проверь настройки Secrets. (Ошибка: {e})"
 
-# --- 2. ИНТЕРФЕЙС И СТИЛИ ---
-st.markdown("""
-    <style>
-    .stButton>button { width: 100%; border-radius: 20px; height: 3.5em; font-weight: bold; }
-    .sos-main button { background-color: #ff4b4b !important; color: white !important; border: none; }
-    .tel-link { font-size: 1.8em; font-weight: bold; text-decoration: none; color: #2e7d32; display: block; text-align: center; padding: 0.6em 0; }
-    </style>
-    """, unsafe_allow_html=True)
-
-# Инициализация состояний
+# --- 2. ИНИЦИАЛИЗАЦИЯ СОСТОЯНИЙ ---
 if "daily_quote" not in st.session_state:
     st.session_state.daily_quote = random.choice([
         "Ты справляешься лучше, чем тебе кажется. ✨",
@@ -41,11 +32,50 @@ if "show_number" not in st.session_state:
     st.session_state.show_number = False
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "dark_mode" not in st.session_state:
+    st.session_state.dark_mode = False
+
+# --- 3. ИНТЕРФЕЙС И СТИЛИ ---
+# Базовые стили (светлая тема + общие элементы)
+st.markdown("""
+    <style>
+    * { transition: background-color 0.3s ease, color 0.3s ease; }
+    .stButton>button { width: 100%; border-radius: 20px; height: 3.5em; font-weight: bold; }
+    .sos-main button { background-color: #ff4b4b !important; color: white !important; border: none; }
+    .tel-link { font-size: 1.8em; font-weight: bold; text-decoration: none; color: #2e7d32; display: block; text-align: center; padding: 0.6em 0; }
+    </style>
+    """, unsafe_allow_html=True)
+
+# Тёмная тема (подключается по флагу)
+if st.session_state.dark_mode:
+    st.markdown("""
+    <style>
+    :root {
+        --bg: #181820; --surface: #242430; --text: #e4e4ec; --border: #38384a; --link: #8b9aff;
+    }
+    .stApp { background-color: var(--bg); color: var(--text); }
+    .main .block-container { background-color: var(--bg); }
+    .stChatMessage { background-color: var(--surface) !important; border-radius: 14px; }
+    input, textarea, select { background-color: var(--surface) !important; color: var(--text) !important; border-color: var(--border) !important; }
+    button:not(.sos-main button) { background-color: var(--surface) !important; color: var(--text) !important; border-color: var(--border) !important; }
+    button:not(.sos-main button):hover { background-color: #2e2e3c !important; }
+    .stAlert > div { background-color: var(--surface) !important; color: var(--text) !important; }
+    .stTextInput > div > div > input::placeholder { color: #888 !important; }
+    h1, h2, h3 { color: #ffffff !important; }
+    a { color: var(--link) !important; }
+    .tel-link { color: #4ade80 !important; } /* Зелёный номер в тёмной теме */
+    </style>
+    """, unsafe_allow_html=True)
+
+# Переключатель темы в сайдбаре
+with st.sidebar:
+    st.session_state.dark_mode = st.toggle("🌙 Тёмная тема", value=st.session_state.dark_mode)
+    st.caption("Переключение мгновенно. Сохраняется в рамках сессии.")
 
 st.title("🌱 Опора")
 st.write(f"*{st.session_state.daily_quote}*")
 
-# --- 3. БЛОК SOS ---
+# --- 4. БЛОК SOS ---
 if not st.session_state.sos_active:
     st.markdown('<div class="sos-main">', unsafe_allow_html=True)
     if st.button("🆘 ЭКСТРЕННАЯ ПОМОЩЬ (SOS)"):
@@ -76,7 +106,7 @@ else:
 
 st.divider()
 
-# --- 4. ЛОГИКА ЧАТА ---
+# --- 5. ЛОГИКА ЧАТА ---
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
@@ -99,7 +129,7 @@ if st.session_state.messages:
         st.session_state.messages = []
         st.rerun()
 
-# --- 5. ДИСКЛЕЙМЕР (компактный, приглушённый, внизу) ---
+# --- 6. ДИСКЛЕЙМЕР (внизу, мелкий, ненавязчивый) ---
 st.markdown("""
 <div style="
     text-align: center; 
