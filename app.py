@@ -20,9 +20,9 @@ def ask_ai(messages):
 # --- 2. ИНИЦИАЛИЗАЦИЯ СОСТОЯНИЙ ---
 if "daily_quote" not in st.session_state:
     st.session_state.daily_quote = random.choice([
-        "Ты справляешься лучше, чем тебе кажется. ✨",
+        "Ты справляешься лучше, чем тебе кажется. ",
         "Твои чувства важны. Позволь им быть. ❤️",
-        "Маленькие шаги тоже ведут к большим целям. 🌱",
+        "Маленькие шаги тоже ведут к большим целям. ",
         "Ты ценен просто потому, что ты есть. ⭐",
         "Дыши. Всё обязательно наладится. 🙏"
     ])
@@ -37,13 +37,13 @@ if "dark_mode" not in st.session_state:
 
 # --- 3. ПЕРЕКЛЮЧАТЕЛЬ ТЕМЫ ---
 with st.sidebar:
-    new_dark_mode = st.toggle("🌙 Тёмная тема", value=st.session_state.dark_mode)
+    new_dark_mode = st.toggle(" Тёмная тема", value=st.session_state.dark_mode)
     if new_dark_mode != st.session_state.dark_mode:
         st.session_state.dark_mode = new_dark_mode
         st.rerun()
     st.caption("Переключение мгновенно. Сохраняется в рамках сессии.")
 
-# --- 4. СТИЛИ (БАЗОВЫЕ) ---
+# --- 4. БАЗОВЫЕ СТИЛИ ---
 st.markdown("""
     <style>
     * { transition: background-color 0.3s ease, color 0.3s ease; }
@@ -53,42 +53,49 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 5. ТЁМНАЯ ТЕМА (ПОЛНОЕ ПОКРЫТИЕ РАМОК) ---
+# --- 5. ТЁМНАЯ ТЕМА (ПОЛНОЕ ПОКРЫТИЕ, ВКЛЮЧАЯ НИЗ) ---
 if st.session_state.dark_mode:
     st.markdown("""
     <style>
     :root {
         --bg: #181820; --surface: #242430; --text: #e4e4ec; --border: #38384a; --link: #8b9aff;
     }
-    /* Основной фон, шапка и контейнер */
-    body, .stApp, .main .block-container, header, [data-testid="stToolbar"] {
+    /* Глобальный фон и шапка */
+    body, .stApp, header, [data-testid="stToolbar"], .main {
         background-color: var(--bg) !important;
         color: var(--text) !important;
     }
-    /* Боковая панель (рамка слева) */
+    /* Боковая панель */
     section[data-testid="stSidebar"], section[data-testid="stSidebar"] > div {
         background-color: #1a1a24 !important;
         border-right: 1px solid var(--border) !important;
     }
-    /* Чат и поля ввода */
+    /* Чат и поле ввода (исправление белой полосы снизу) */
     .stChatMessage { background-color: var(--surface) !important; }
-    input, textarea, select, .stTextInput > div > div > input {
-        background-color: var(--surface) !important; color: var(--text) !important; border-color: var(--border) !important;
+    div[data-testid="stChatInput"], .stChatInput {
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
     }
-    /* Кнопки (кроме SOS) */
-    button:not(.sos-main button) {
-        background-color: var(--surface) !important; color: var(--text) !important; border: 1px solid var(--border) !important;
+    div[data-testid="stChatInput"] textarea, .stChatInput textarea {
+        background-color: var(--surface) !important;
+        color: var(--text) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 12px !important;
     }
+    /* Кнопки и инпуты */
+    button:not(.sos-main button) { background-color: var(--surface) !important; color: var(--text) !important; border: 1px solid var(--border) !important; }
     button:not(.sos-main button):hover { background-color: #2e2e3c !important; }
-    /* Скроллбар */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    input, select { background-color: var(--surface) !important; color: var(--text) !important; border-color: var(--border) !important; }
     /* Текст, ссылки, разделители */
     h1, h2, h3, p, div, span, label, .stMarkdown { color: var(--text) !important; }
     a { color: var(--link) !important; }
     .tel-link { color: #4ade80 !important; }
     .stDivider { border-top-color: var(--border) !important; }
+    /* Скроллбар */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -98,7 +105,7 @@ st.write(f"*{st.session_state.daily_quote}*")
 # --- 6. БЛОК SOS ---
 if not st.session_state.sos_active:
     st.markdown('<div class="sos-main">', unsafe_allow_html=True)
-    if st.button("🆘 ЭКСТРЕННАЯ ПОМОЩЬ (SOS)"):
+    if st.button(" ЭКСТРЕННАЯ ПОМОЩЬ (SOS)"):
         st.session_state.sos_active = True
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
@@ -145,7 +152,7 @@ if prompt := st.chat_input("Что у тебя на душе?"):
 
 if st.session_state.messages:
     st.write("")
-    if st.button("️ Очистить чат (анонимно)"):
+    if st.button("🗑️ Очистить чат (анонимно)"):
         st.session_state.messages = []
         st.rerun()
 
