@@ -23,11 +23,10 @@ st.markdown("""
     .stButton>button { width: 100%; border-radius: 20px; height: 3.5em; font-weight: bold; }
     .sos-main button { background-color: #ff4b4b !important; color: white !important; border: none; }
     .tel-link { font-size: 1.8em; font-weight: bold; text-decoration: none; color: #2e7d32; display: block; text-align: center; padding: 0.6em 0; }
-    .tel-link:active { color: #1b5e20; }
     </style>
     """, unsafe_allow_html=True)
 
-# Инициализация состояний (чтобы не дублировать проверки)
+# Инициализация состояний
 if "daily_quote" not in st.session_state:
     st.session_state.daily_quote = random.choice([
         "Ты справляешься лучше, чем тебе кажется. ✨",
@@ -68,11 +67,7 @@ else:
                 st.rerun()
     else:
         st.success("Нажми на номер, чтобы открыть набор:")
-        # Ссылка tel: открывает системный номеронабиратель с предзаполненным номером
-        st.markdown(
-            '<a href="tel:88002000122" class="tel-link">📞 8-800-2000-122</a>',
-            unsafe_allow_html=True
-        )
+        st.markdown('<a href="tel:88002000122" class="tel-link">📞 8-800-2000-122</a>', unsafe_allow_html=True)
         st.caption("Бесплатно, анонимно, круглосуточно.")
         if st.button("🔙 Назад в чат"):
             st.session_state.show_number = False
@@ -104,19 +99,17 @@ if st.session_state.messages:
         st.session_state.messages = []
         st.rerun()
 
-# --- 5. ДИСКЛЕЙМЕР (внизу, мелкий, ненавязчивый) ---
+# --- 5. ДИСКЛЕЙМЕР (компактный, приглушённый, внизу) ---
 st.markdown("""
 <div style="
     text-align: center; 
-    color: #888; 
-    font-size: 0.75rem; 
-    padding: 1.5rem 0 2rem; 
-    line-height: 1.5;
-    border-top: 1px solid #eee;
-    margin-top: 1rem;
+    color: #a0a0a0; 
+    font-size: 0.6rem; 
+    padding: 0.3rem 0 1rem; 
+    line-height: 1.3;
 ">
     ⚠️ «Опора» — ИИ-помощник, а не замена специалисту. Не ставит диагнозы и не назначает лечение.<br>
-    В кризисных ситуациях: <strong>112</strong> или <strong>8-800-2000-122</strong> (анонимно, круглосуточно).<br>
+    В кризисных ситуациях: <strong style="font-weight: normal; color: #999;">112</strong> или <strong style="font-weight: normal; color: #999;">8-800-2000-122</strong> (анонимно, круглосуточно).<br>
     Переписка не сохраняется и полностью анонимна.
 </div>
 """, unsafe_allow_html=True)
