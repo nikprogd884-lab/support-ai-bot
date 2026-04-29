@@ -7,7 +7,6 @@ st.set_page_config(page_title="Опора", page_icon="🌱", layout="centered")
 
 def ask_ai(messages):
     try:
-        # Используем логику из твоего рабочего кода через st.secrets
         client = Groq(api_key=st.secrets["GROQ_API_KEY"])
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
@@ -92,3 +91,20 @@ if st.session_state.messages:
     if st.button("🗑️ Очистить чат (анонимно)"):
         st.session_state.messages = []
         st.rerun()
+
+# --- 5. ДИСКЛЕЙМЕР (внизу, мелкий, ненавязчивый) ---
+st.markdown("""
+<div style="
+    text-align: center; 
+    color: #888; 
+    font-size: 0.75rem; 
+    padding: 1.5rem 0 2rem; 
+    line-height: 1.5;
+    border-top: 1px solid #eee;
+    margin-top: 1rem;
+">
+    ⚠️ «Опора» — ИИ-помощник, а не замена специалисту. Не ставит диагнозы и не назначает лечение.<br>
+    В кризисных ситуациях: <strong>112</strong> или <strong>8-800-2000-122</strong> (анонимно, круглосуточно).<br>
+    Переписка не сохраняется и полностью анонимна.
+</div>
+""", unsafe_allow_html=True)
