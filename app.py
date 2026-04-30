@@ -1,7 +1,6 @@
 import streamlit as st
 from groq import Groq
 import random
-import re
 
 # --- 1. КОНФИГУРАЦИЯ ---
 st.set_page_config(page_title="Опора", page_icon="🌱", layout="centered")
@@ -68,7 +67,30 @@ st.markdown("""
     * { transition: background-color 0.3s ease, color 0.3s ease; }
     .stButton>button { width: 100%; border-radius: 20px; height: 3.5em; font-weight: bold; }
     .sos-main button { background-color: #ff4b4b !important; color: white !important; border: none; }
-    .tel-link { font-size: 1.8em; font-weight: bold; text-decoration: none; color: #2e7d32; display: block; text-align: center; padding: 0.6em 0; }
+    
+    /* Стиль для большой кнопки вызова */
+    .big-call-btn {
+        display: block;
+        width: 100%;
+        padding: 1rem;
+        background-color: #28a745;
+        color: white;
+        text-align: center;
+        font-size: 1.5rem;
+        font-weight: bold;
+        border-radius: 15px;
+        text-decoration: none;
+        margin-top: 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        animation: pulse 2s infinite;
+    }
+    .big-call-btn:hover { background-color: #218838; color: white; }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+        70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -91,7 +113,6 @@ if st.session_state.dark_mode:
     button:not(.sos-main button):hover { background-color: #2e2e3c !important; }
     h1, h2, h3, p, div, span, label { color: var(--text) !important; }
     a { color: var(--link) !important; }
-    .tel-link { color: #4ade80 !important; }
     .stDivider { border-top-color: var(--border) !important; }
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: var(--bg); }
@@ -102,7 +123,7 @@ if st.session_state.dark_mode:
 st.title("🌱 Опора")
 st.write(f"*{st.session_state.daily_quote}*")
 
-# --- 5. БЛОК SOS ---
+# --- 5. БЛОК SOS (Ручной) ---
 if not st.session_state.sos_active:
     st.markdown('<div class="sos-main">', unsafe_allow_html=True)
     if st.button("🆘 ЭКСТРЕННАЯ ПОМОЩЬ (SOS)"):
@@ -110,26 +131,20 @@ if not st.session_state.sos_active:
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 else:
-    st.warning("Показать номер Детского телефона доверия?")
+    # Этот блок показывается, если SOS активирован вручную или автоматически
+    st.warning("🆘 Мне кажется, тебе сейчас очень тяжело. Пожалуйста, позвони специалистам, они помогут.")
     
-    if not st.session_state.show_number:
-        c1, c2 = st.columns(2)
-        with c1:
-            if st.button("✅ ДА, показать", type="primary"):
-                st.session_state.show_number = True
-                st.rerun()
-        with c2:
-            if st.button("❌ Нет, назад"):
-                st.session_state.sos_active = False
-                st.rerun()
-    else:
-        st.success("Нажми на номер, чтобы открыть набор:")
-        st.markdown('<a href="tel:88002000122" class="tel-link">📞 8-800-2000-122</a>', unsafe_allow_html=True)
-        st.caption("Бесплатно, анонимно, круглосуточно.")
-        if st.button("🔙 Назад в чат"):
-            st.session_state.show_number = False
-            st.session_state.sos_active = False
-            st.rerun()
+    # Большая кнопка для быстрого набора
+    st.markdown(
+        '<a href="tel:88002000122" class="big-call-btn">📞 НАБРАТЬ 8-800-2000-122</a>',
+        unsafe_allow_html=True
+    )
+    st.caption("Бесплатно, анонимно, круглосуточно. Нажми на кнопку выше, чтобы открыть телефон.")
+    
+    if st.button("🔙 Я в порядке, закрыть"):
+        st.session_state.sos_active = False
+        st.session_state.show_number = False
+        st.rerun()
 
 st.divider()
 
@@ -150,11 +165,13 @@ if prompt := st.chat_input("Что у тебя на душе?"):
             # Проверка на триггер SOS от ИИ
             if "__SOS_TRIGGER__" in response_text:
                 st.session_state.sos_active = True
-                st.session_state.show_number = True
                 st.warning("🆘 Мне кажется, тебе сейчас очень тяжело. Пожалуйста, позвони специалистам, они помогут.")
-                st.markdown('<a href="tel:88002000122" class="tel-link">📞 8-800-2000-122</a>', unsafe_allow_html=True)
-                st.caption("Бесплатно, анонимно, круглосуточно.")
-                # Не сохраняем этот "ответ" в историю, чтобы не портить диалог кодом
+                st.markdown(
+                    '<a href="tel:88002000122" class="big-call-btn">📞 НАБРАТЬ 8-800-2000-122</a>',
+                    unsafe_allow_html=True
+                )
+                st.caption("Бесплатно, анонимно, круглосуточно. Нажми на кнопку выше, чтобы открыть телефон.")
+                # Не сохраняем ответ в историю, чтобы не портить диалог техническим кодом
             else:
                 st.markdown(response_text)
                 st.session_state.messages.append({"role": "assistant", "content": response_text})
