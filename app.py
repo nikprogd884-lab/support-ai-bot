@@ -45,12 +45,12 @@ if "daily_quote" not in st.session_state:
     ])
 if "sos_active" not in st.session_state:
     st.session_state.sos_active = False
+if "show_number" not in st.session_state:
+    st.session_state.show_number = False
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "dark_mode" not in st.session_state:
     st.session_state.dark_mode = False
-if "input_text" not in st.session_state:
-    st.session_state.input_text = "" # Для хранения текста в поле ввода
 
 # --- 3. ПЕРЕКЛЮЧАТЕЛЬ ТЕМЫ ---
 with st.sidebar:
@@ -66,33 +66,39 @@ st.markdown("""
     * { transition: background-color 0.3s ease, color 0.3s ease; }
     .stButton>button { width: 100%; border-radius: 20px; height: 3.5em; font-weight: bold; }
     .sos-main button { background-color: #ff4b4b !important; color: white !important; border: none; }
-    .tel-link { font-size: 1.8em; font-weight: bold; text-decoration: none; color: #2e7d32; display: block; text-align: center; padding: 0.6em 0; }
     
-    /* Стили для чипсов (подсказок) */
-    .chip-container {
-        display: flex;
-        gap: 8px;
-        overflow-x: auto;
-        padding-bottom: 10px;
-        margin-bottom: 5px;
-        scrollbar-width: none; /* Firefox */
+    /* Стили для кнопок-подсказок */
+    .starter-btn {
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        padding: 0.5rem 1rem !important;
+        font-size: 0.9rem !important;
+        min-width: 0 !important;
     }
-    .chip-container::-webkit-scrollbar { display: none; /* Chrome/Safari */ }
     
-    .stChip {
-        background-color: #f0f2f6;
-        border: 1px solid #dcdcdc;
-        border-radius: 16px;
-        padding: 6px 14px;
-        font-size: 0.9rem;
-        cursor: pointer;
-        white-space: nowrap;
-        transition: all 0.2s;
-        color: #333;
+    /* Большая кнопка вызова SOS */
+    .big-call-btn {
+        display: block;
+        width: 100%;
+        padding: 1rem;
+        background-color: #28a745;
+        color: white;
+        text-align: center;
+        font-size: 1.5rem;
+        font-weight: bold;
+        border-radius: 15px;
+        text-decoration: none;
+        margin-top: 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        animation: pulse 2s infinite;
     }
-    .stChip:hover {
-        background-color: #e0e0e0;
-        transform: translateY(-1px);
+    .big-call-btn:hover { background-color: #218838; color: white; }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+        70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -105,7 +111,6 @@ if st.session_state.dark_mode:
     section[data-testid="stSidebar"], section[data-testid="stSidebar"] > div { background-color: #1a1a24 !important; border-right: 1px solid var(--border) !important; }
     .stChatMessage { background-color: var(--surface) !important; }
     
-    /* ФИКС БЕЛОЙ ПОЛОСЫ ВНИЗУ */
     [data-testid="stChatInputContainer"], [data-testid="stBottom"], [data-testid="stBottom"] > div, [data-testid="stBottomBlockContainer"] {
         background-color: transparent !important; border: none !important; box-shadow: none !important;
     }
@@ -116,22 +121,17 @@ if st.session_state.dark_mode:
     button:not(.sos-main button):hover { background-color: #2e2e3c !important; }
     h1, h2, h3, p, div, span, label { color: var(--text) !important; }
     a { color: var(--link) !important; }
-    .tel-link { color: #4ade80 !important; }
     .stDivider { border-top-color: var(--border) !important; }
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: var(--bg); }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-    
-    /* Чипсы в темной теме */
-    .stChip { background-color: #2e2e3c; border-color: #38384a; color: #e4e4ec; }
-    .stChip:hover { background-color: #38384a; }
     </style>
     """, unsafe_allow_html=True)
 
 st.title("🌱 Опора")
 st.write(f"*{st.session_state.daily_quote}*")
 
-# --- 5. БЛОК SOS ---
+# --- 5. БЛОК SOS (Ручной) ---
 if not st.session_state.sos_active:
     st.markdown('<div class="sos-main">', unsafe_allow_html=True)
     if st.button("🆘 ЭКСТРЕННАЯ ПОМОЩЬ (SOS)"):
@@ -141,61 +141,71 @@ if not st.session_state.sos_active:
 else:
     st.warning("🆘 Мне кажется, тебе сейчас очень тяжело. Пожалуйста, позвони специалистам, они помогут.")
     st.markdown(
-        '<a href="tel:88002000122" class="big-call-btn" style="display:block;width:100%;padding:1rem;background:#28a745;color:white;text-align:center;font-size:1.5rem;font-weight:bold;border-radius:15px;text-decoration:none;margin-top:10px;">📞 НАБРАТЬ 8-800-2000-122</a>',
+        '<a href="tel:88002000122" class="big-call-btn">📞 НАБРАТЬ 8-800-2000-122</a>',
         unsafe_allow_html=True
     )
     st.caption("Бесплатно, анонимно, круглосуточно. Нажми на кнопку выше, чтобы открыть телефон.")
     
     if st.button("🔙 Я в порядке, закрыть"):
         st.session_state.sos_active = False
+        st.session_state.show_number = False
         st.rerun()
 
 st.divider()
 
-# --- 6. ЛОГИКА ЧАТА ---
+# --- 6. КНОПКИ-ПОДСКАЗКИ (показываем только если чат пуст) ---
+if len(st.session_state.messages) == 0:
+    starters = ["Мне тревожно", "Я устал", "Хочу выговориться", "Нужен совет", "Просто побудь со мной", "Мне одиноко"]
+    cols = st.columns(len(starters))
+    for i, starter in enumerate(starters):
+        with cols[i]:
+            if st.button(starter, key=f"start_{i}", use_container_width=True, help=None):
+                # Добавляем класс для стиля
+                st.markdown(f"""
+                <style>
+                #start_{i} > button {{
+                    white-space: nowrap !important;
+                    overflow: hidden !important;
+                    text-overflow: ellipsis !important;
+                    padding: 0.5rem 0.8rem !important;
+                    font-size: 0.85rem !important;
+                }}
+                </style>
+                """, unsafe_allow_html=True)
+                
+                st.session_state.pending_prompt = starter
+                st.rerun()
+
+# Обработка подстановки текста из кнопки
+if "pending_prompt" in st.session_state and st.session_state.pending_prompt:
+    prompt = st.session_state.pending_prompt
+    del st.session_state.pending_prompt
+    
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        with st.spinner("Слушаю тебя..."):
+            response_text = ask_ai(st.session_state.messages)
+            
+            if "__SOS_TRIGGER__" in response_text:
+                st.session_state.sos_active = True
+                st.warning("🆘 Мне кажется, тебе сейчас очень тяжело. Пожалуйста, позвони специалистам, они помогут.")
+                st.markdown(
+                    '<a href="tel:88002000122" class="big-call-btn">📞 НАБРАТЬ 8-800-2000-122</a>',
+                    unsafe_allow_html=True
+                )
+                st.caption("Бесплатно, анонимно, круглосуточно. Нажми на кнопку выше, чтобы открыть телефон.")
+            else:
+                st.markdown(response_text)
+                st.session_state.messages.append({"role": "assistant", "content": response_text})
+
+# --- 7. ОСНОВНОЙ ЧАТ ---
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# --- 7. ЧИПСЫ (ПОДСКАЗКИ) ---
-# Список подсказок
-starters = ["Мне тревожно", "Я устал", "Хочу выговориться", "Нужен совет", "Просто побудь со мной", "Мне одиноко"]
-
-# Отображаем чипсы в ряд
-cols = st.columns(len(starters))
-for i, starter in enumerate(starters):
-    with cols[i]:
-        # Используем small_button для компактности или обычный button
-        if st.button(starter, key=f"chip_{i}", use_container_width=True):
-            st.session_state.input_text = starter
-            # Мы не делаем rerun здесь, чтобы фокус остался на поле ввода, 
-            # но обновляем значение через JS было бы сложнее, поэтому используем трюк с placeholder
-            # В Streamlit проще всего сделать так: при клике мы просто запоминаем текст,
-            # а пользователь сам нажмет Enter. Но чтобы текст появился в поле, 
-            # нам нужно использовать стейт input_text, который привязан к chat_input? 
-            # К сожалению, st.chat_input не поддерживает начальное значение из стейта напрямую в старых версиях.
-            # Поэтому сделаем иначе: при клике мы просто добавляем сообщение сразу, как будто пользователь его отправил.
-            
-            # ВАРИАНТ А: Сразу отправлять сообщение (проще для UX)
-            prompt = starter
-            st.session_state.messages.append({"role": "user", "content": prompt})
-            with st.chat_message("user"):
-                st.markdown(prompt)
-            
-            with st.chat_message("assistant"):
-                with st.spinner("Слушаю тебя..."):
-                    response_text = ask_ai(st.session_state.messages)
-                    
-                    if "__SOS_TRIGGER__" in response_text:
-                        st.session_state.sos_active = True
-                        st.warning("🆘 Мне кажется, тебе сейчас очень тяжело. Пожалуйста, позвони специалистам.")
-                        st.markdown('<a href="tel:88002000122" class="big-call-btn" style="display:block;width:100%;padding:1rem;background:#28a745;color:white;text-align:center;font-size:1.5rem;font-weight:bold;border-radius:15px;text-decoration:none;margin-top:10px;">📞 НАБРАТЬ 8-800-2000-122</a>', unsafe_allow_html=True)
-                    else:
-                        st.markdown(response_text)
-                        st.session_state.messages.append({"role": "assistant", "content": response_text})
-            st.rerun()
-
-# Поле ввода (если пользователь хочет писать сам)
 if prompt := st.chat_input("Что у тебя на душе?"):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
@@ -207,8 +217,12 @@ if prompt := st.chat_input("Что у тебя на душе?"):
             
             if "__SOS_TRIGGER__" in response_text:
                 st.session_state.sos_active = True
-                st.warning("🆘 Мне кажется, тебе сейчас очень тяжело. Пожалуйста, позвони специалистам.")
-                st.markdown('<a href="tel:88002000122" class="big-call-btn" style="display:block;width:100%;padding:1rem;background:#28a745;color:white;text-align:center;font-size:1.5rem;font-weight:bold;border-radius:15px;text-decoration:none;margin-top:10px;">📞 НАБРАТЬ 8-800-2000-122</a>', unsafe_allow_html=True)
+                st.warning("🆘 Мне кажется, тебе сейчас очень тяжело. Пожалуйста, позвони специалистам, они помогут.")
+                st.markdown(
+                    '<a href="tel:88002000122" class="big-call-btn">📞 НАБРАТЬ 8-800-2000-122</a>',
+                    unsafe_allow_html=True
+                )
+                st.caption("Бесплатно, анонимно, круглосуточно. Нажми на кнопку выше, чтобы открыть телефон.")
             else:
                 st.markdown(response_text)
                 st.session_state.messages.append({"role": "assistant", "content": response_text})
